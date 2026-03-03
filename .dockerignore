@@ -1,0 +1,8 @@
+node_modules
+dist
+.manus-logs
+.git
+.gitignore
+*.md
+!README-DEPLOY.md
+!ENV-VARIABLES.md

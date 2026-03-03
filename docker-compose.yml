@@ -1,0 +1,55 @@
+# ============================================
+# VSL Performance Dashboard - Docker Compose
+# Services: MySQL 8.0 + Node.js App
+# ============================================
+
+version: "3.8"
+
+services:
+  # ---- MySQL Database ----
+  db:
+    image: mysql:8.0
+    container_name: vsl-dashboard-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-vsl_root_pass_2026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vsl_dashboard}
+      MYSQL_USER: ${MYSQL_USER:-vsl_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-vsl_secure_pass_2026}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./drizzle:/docker-entrypoint-initdb.d/migrations
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-vsl_root_pass_2026}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ---- VSL Dashboard App ----
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vsl-dashboard-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://${MYSQL_USER:-vsl_user}:${MYSQL_PASSWORD:-vsl_secure_pass_2026}@db:3306/${MYSQL_DATABASE:-vsl_dashboard}
+      JWT_SECRET: ${JWT_SECRET:-change_me_to_a_random_64_char_string}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+    driver: local
