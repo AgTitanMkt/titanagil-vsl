@@ -292,14 +292,15 @@ export async function getSetting(key: string): Promise<string | null> {
 export async function setSetting(key: string, value: string, description?: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(apiSettings).values({
-    settingKey: key,
-    settingValue: value,
-    description,
-  }).onDuplicateKeyUpdate({
-    set: { settingValue: value, description },
-  });
+  // Use raw SQL to avoid Drizzle's "default" keyword issue with some MySQL versions
+  const desc = description || null;
+  await db.execute(
+    sql`INSERT INTO api_settings (settingKey, settingValue, description) 
+        VALUES (${key}, ${value}, ${desc}) 
+        ON DUPLICATE KEY UPDATE settingValue = ${value}, description = ${desc}`
+  );
 }
+
 
 export async function getAllSettings() {
   const db = await getDb();
