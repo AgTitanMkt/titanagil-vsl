@@ -8,6 +8,8 @@ import {
   apiSettings,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import mysql from "mysql2/promise";
+
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -290,16 +292,23 @@ export async function getSetting(key: string): Promise<string | null> {
 }
 
 export async function setSetting(key: string, value: string, description?: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  // Use raw SQL to avoid Drizzle's "default" keyword issue with some MySQL versions
-  const desc = description || null;
-  await db.execute(
-    sql`INSERT INTO api_settings (settingKey, settingValue, description) 
-        VALUES (${key}, ${value}, ${desc}) 
-        ON DUPLICATE KEY UPDATE settingValue = ${value}, description = ${desc}`
-  );
+  // Use mysql2 directly to avoid Drizzle ORM compatibility issues with some MySQL versions
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) throw new Error("Database not available");
+  const connection = await mysql.createConnection(dbUrl);
+  try {
+    const desc = description || null;
+    await connection.execute(
+      `INSERT INTO api_settings (settingKey, settingValue, description) 
+       VALUES (?, ?, ?) 
+       ON DUPLICATE KEY UPDATE settingValue = VALUES(settingValue), description = VALUES(description)`,
+      [key, value, desc]
+    );
+  } finally {
+    await connection.end();
+  }
 }
+
 
 
 export async function getAllSettings() {
