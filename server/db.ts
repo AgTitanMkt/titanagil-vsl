@@ -292,10 +292,19 @@ export async function getSetting(key: string): Promise<string | null> {
 }
 
 export async function setSetting(key: string, value: string, description?: string) {
-  // Use mysql2 directly to avoid Drizzle ORM compatibility issues with some MySQL versions
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) throw new Error("Database not available");
-  const connection = await mysql.createConnection(dbUrl);
+  
+  // Parse DATABASE_URL manually to handle special chars in password
+  const url = new URL(dbUrl);
+  const connection = await mysql.createConnection({
+    host: url.hostname,
+    port: parseInt(url.port || "3306"),
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: url.pathname.slice(1),
+  });
+  
   try {
     const desc = description || null;
     await connection.execute(
@@ -308,6 +317,7 @@ export async function setSetting(key: string, value: string, description?: strin
     await connection.end();
   }
 }
+
 
 
 
