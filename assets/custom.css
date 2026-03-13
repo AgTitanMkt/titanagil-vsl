@@ -1,0 +1,154 @@
+/* Dark mode overrides for Dash components */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #0f1117;
+    color: #e4e4e7;
+    margin: 0;
+    padding: 0;
+}
+
+/* Dropdown dark styling */
+.dash-dark-dropdown .Select-control {
+    background-color: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+    color: #e4e4e7 !important;
+}
+
+.dash-dark-dropdown .Select-menu-outer {
+    background-color: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+}
+
+.dash-dark-dropdown .Select-option {
+    background-color: #1a1d27 !important;
+    color: #e4e4e7 !important;
+}
+
+.dash-dark-dropdown .Select-option.is-focused {
+    background-color: #2a2d3a !important;
+}
+
+.dash-dark-dropdown .Select-value-label {
+    color: #e4e4e7 !important;
+}
+
+.dash-dark-dropdown .Select-placeholder {
+    color: #71717a !important;
+}
+
+/* Dash dropdown v2 */
+.Select-control,
+.dash-dropdown .Select-control {
+    background-color: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+}
+
+.VirtualizedSelectOption {
+    background-color: #1a1d27 !important;
+    color: #e4e4e7 !important;
+}
+
+.VirtualizedSelectFocusedOption {
+    background-color: #2a2d3a !important;
+}
+
+/* Date picker dark */
+.DateInput_input {
+    background-color: #1a1d27 !important;
+    color: #e4e4e7 !important;
+    border-color: #2a2d3a !important;
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+}
+
+.DateInput {
+    background-color: #1a1d27 !important;
+}
+
+.CalendarDay__default {
+    background: #1a1d27 !important;
+    color: #e4e4e7 !important;
+    border-color: #2a2d3a !important;
+}
+
+.CalendarDay__selected {
+    background: #3b82f6 !important;
+    color: white !important;
+}
+
+.DayPicker {
+    background: #1a1d27 !important;
+}
+
+.CalendarMonth {
+    background: #1a1d27 !important;
+}
+
+.CalendarMonthGrid {
+    background: #1a1d27 !important;
+}
+
+.DayPickerNavigation_button__default {
+    background: #2a2d3a !important;
+    border-color: #2a2d3a !important;
+    color: #e4e4e7 !important;
+}
+
+/* Input dark */
+.form-control {
+    background-color: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+    color: #e4e4e7 !important;
+}
+
+.form-control:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Table styling */
+table {
+    border-collapse: collapse;
+}
+
+table td, table th {
+    padding: 10px 8px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0f1117;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2a2d3a;
+    border-radius: 3px;
+}
+
+/* Links */
+a {
+    text-decoration: none !important;
+}
+
+a:hover .d-flex {
+    background-color: #2a2d3a !important;
+}
+
+/* Checklist */
+.form-check-input {
+    background-color: #2a2d3a !important;
+    border-color: #3b82f6 !important;
+}
+
+.form-check-input:checked {
+    background-color: #3b82f6 !important;
+}
+
+/* Alert */
+.alert {
+    font-size: 13px;
+}
