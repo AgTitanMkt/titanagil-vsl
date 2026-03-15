@@ -228,59 +228,106 @@ def register_callbacks(app):
         rows = []
         for _, r in df.iterrows():
             if by_lander:
-                # Truncar nome da lander em 60 chars
-                lander_truncated = r["lander_name"][:60] + "..." if len(r["lander_name"]) > 60 else r["lander_name"]
-                name_display = html.Div([
-                    html.Div([
-                        html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "15px"}),
-                        html.Span(f' | {r["product"]}', style={"fontSize": "11px", "color": COLORS["accent"], "marginLeft": "4px"}) if r["product"] else None,
-                    ]),
-                    html.Div(lander_truncated, style={
-                        "fontSize": "9px",
+                # ---- MODO POR LANDER: clique para expandir nome completo ----
+                lander_full = r["lander_name"]
+                lander_short = lander_full[:45] + "..." if len(lander_full) > 45 else lander_full
+
+                if len(lander_full) > 45:
+                    lander_display = html.Details([
+                        html.Summary(lander_short, style={
+                            "fontSize": "11px",
+                            "color": COLORS["text_muted"],
+                            "cursor": "pointer",
+                            "listStyle": "none",
+                            "outline": "none",
+                        }),
+                        html.Div(lander_full, style={
+                            "fontSize": "11px",
+                            "color": COLORS["text"],
+                            "fontWeight": "500",
+                            "marginTop": "4px",
+                            "padding": "6px 8px",
+                            "backgroundColor": "rgba(59,130,246,0.08)",
+                            "borderRadius": "4px",
+                            "wordBreak": "break-word",
+                            "lineHeight": "1.5",
+                        }),
+                    ], style={"marginTop": "2px"})
+                else:
+                    lander_display = html.Div(lander_full, style={
+                        "fontSize": "11px",
                         "color": COLORS["text_muted"],
                         "marginTop": "2px",
-                        "maxWidth": "350px",
-                        "overflow": "hidden",
-                        "textOverflow": "ellipsis",
-                        "whiteSpace": "nowrap",
-                    }),
-                    html.Div(f"Player: {r['player_id'][:20]}", style={"fontSize": "9px", "color": "#60a5fa", "marginTop": "1px"}) if r.get("player_id") else None,
-                ], style={"minWidth": "300px"})
-            else:
-                landers_list = r.get("landers", [])
-                # Mostrar as 2 primeiras landers em linhas separadas, truncadas
-                lander_items = []
-                for ln in landers_list[:2]:
-                    # Truncar cada nome em 55 caracteres
-                    truncated = ln[:55] + "..." if len(ln) > 55 else ln
-                    lander_items.append(
-                        html.Div(truncated, style={
-                            "fontSize": "9px",
-                            "color": COLORS["text_muted"],
-                            "lineHeight": "1.3",
-                            "whiteSpace": "nowrap",
-                            "overflow": "hidden",
-                            "textOverflow": "ellipsis",
-                            "maxWidth": "350px",
-                        })
-                    )
-                if len(landers_list) > 2:
-                    lander_items.append(
-                        html.Div(f"+{len(landers_list) - 2} mais", style={
-                            "fontSize": "9px",
-                            "color": COLORS["accent"],
-                            "fontStyle": "italic",
-                        })
-                    )
+                    })
 
                 name_display = html.Div([
                     html.Div([
-                        html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "15px"}),
+                        html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "14px"}),
+                        html.Span(f' | {r["product"]}', style={"fontSize": "11px", "color": COLORS["accent"], "marginLeft": "4px"}) if r["product"] else None,
+                    ]),
+                    lander_display,
+                    html.Div(f"Player: {r['player_id'][:20]}", style={"fontSize": "9px", "color": "#60a5fa", "marginTop": "1px"}) if r.get("player_id") else None,
+                ], style={"minWidth": "320px"})
+
+            else:
+                # ---- MODO AGRUPADO: clique para expandir lista de landers ----
+                landers_list = r.get("landers", [])
+                first_lander = landers_list[0] if landers_list else ""
+                first_short = first_lander[:50] + "..." if len(first_lander) > 50 else first_lander
+
+                if len(landers_list) > 1:
+                    all_landers_div = []
+                    for ln in landers_list:
+                        all_landers_div.append(
+                            html.Div(ln, style={
+                                "fontSize": "10px",
+                                "color": COLORS["text"],
+                                "padding": "3px 0",
+                                "borderBottom": f"1px solid {COLORS['card_border']}",
+                                "wordBreak": "break-word",
+                                "lineHeight": "1.4",
+                            })
+                        )
+                    lander_display = html.Details([
+                        html.Summary(
+                            html.Span([
+                                html.Span(first_short, style={"color": COLORS["text_muted"]}),
+                                html.Span(f"  +{len(landers_list) - 1} mais", style={"color": COLORS["accent"], "fontStyle": "italic"}),
+                            ]),
+                            style={
+                                "fontSize": "10px",
+                                "cursor": "pointer",
+                                "listStyle": "none",
+                                "outline": "none",
+                            },
+                        ),
+                        html.Div(all_landers_div, style={
+                            "marginTop": "4px",
+                            "padding": "6px 8px",
+                            "backgroundColor": "rgba(59,130,246,0.06)",
+                            "borderRadius": "4px",
+                            "maxHeight": "200px",
+                            "overflowY": "auto",
+                        }),
+                    ], style={"marginTop": "3px"})
+                elif landers_list:
+                    lander_display = html.Div(first_lander, title=first_lander, style={
+                        "fontSize": "10px",
+                        "color": COLORS["text_muted"],
+                        "marginTop": "3px",
+                        "wordBreak": "break-word",
+                    })
+                else:
+                    lander_display = None
+
+                name_display = html.Div([
+                    html.Div([
+                        html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "14px"}),
                         html.Span(f' | {r["product"]}', style={"fontSize": "11px", "color": COLORS["accent"], "marginLeft": "4px"}) if r["product"] else None,
                         html.Span(f'  ({r["lander_count"]} landers)', style={"fontSize": "10px", "color": COLORS["text_muted"], "marginLeft": "6px"}),
                     ]),
-                    html.Div(lander_items, style={"marginTop": "3px"}),
-                ], style={"minWidth": "300px"})
+                    lander_display,
+                ], style={"minWidth": "320px"})
 
             profit_color = "#22c55e" if r["profit"] > 0 else "#ef4444"
             roi_val = r["roi"]
@@ -580,7 +627,8 @@ def register_callbacks(app):
             ],
             style={"width": "100%", "fontSize": "13px"},
         )
-        
+
+    # ========== MAPPING ==========
     @app.callback(
         Output("mapping-table-container", "children"),
         Input("url", "pathname"),
@@ -629,7 +677,6 @@ def register_callbacks(app):
                               style={"color": COLORS["text_muted"], "textAlign": "center", "padding": "40px"})
 
             # Group by VSL for display
-            # Items have: id, vsl_id, product, redtrack_name, vturb_player_id, total_cost, is_offer
             vsl_groups = {}
 
             for row in lander_rows:
@@ -688,34 +735,52 @@ def register_callbacks(app):
                     has_mapping = bool(item["vturb_player_id"])
                     status = dbc.Badge("OK", color="success", className="me-1") if has_mapping else dbc.Badge("Pendente", color="warning", className="me-1")
 
-                    # Truncar nome em 50 chars
                     full_name = item["redtrack_name"] or ""
-                    truncated_name = full_name[:50] + "..." if len(full_name) > 50 else full_name
+                    short_name = full_name[:50] + "..." if len(full_name) > 50 else full_name
+
+                    # Clique para expandir nome completo
+                    if len(full_name) > 50:
+                        name_element = html.Details([
+                            html.Summary(short_name, style={
+                                "fontSize": "11px",
+                                "color": COLORS["text_muted"],
+                                "cursor": "pointer",
+                                "listStyle": "none",
+                                "outline": "none",
+                            }),
+                            html.Div(full_name, style={
+                                "fontSize": "11px",
+                                "color": COLORS["text"],
+                                "fontWeight": "500",
+                                "marginTop": "4px",
+                                "padding": "6px 8px",
+                                "backgroundColor": "rgba(59,130,246,0.08)",
+                                "borderRadius": "4px",
+                                "wordBreak": "break-word",
+                                "lineHeight": "1.5",
+                            }),
+                        ])
+                    else:
+                        name_element = html.Span(full_name, style={
+                            "fontSize": "11px",
+                            "color": COLORS["text"],
+                            "fontWeight": "500",
+                        })
 
                     table_rows.append(
                         html.Tr(
                             [
                                 html.Td(
                                     html.Div([
-                                        status,
-                                        html.Span(truncated_name, style={
-                                            "fontSize": "10px",
-                                            "color": COLORS["text_muted"],
-                                            "fontWeight": "500",
-                                        }),
-                                        html.Span(f" | {cost_display}", style={
-                                            "fontSize": "9px",
-                                            "color": COLORS["text_muted"],
-                                            "marginLeft": "6px",
-                                            "opacity": "0.7",
-                                        }),
-                                    ], style={
-                                        "display": "flex",
-                                        "alignItems": "center",
-                                        "overflow": "hidden",
-                                        "whiteSpace": "nowrap",
-                                        "textOverflow": "ellipsis",
-                                    }),
+                                        html.Div([
+                                            status,
+                                            html.Span(f" Cost: {cost_display}", style={
+                                                "fontSize": "10px",
+                                                "color": COLORS["text_muted"],
+                                            }),
+                                        ], style={"display": "flex", "alignItems": "center", "marginBottom": "2px"}),
+                                        name_element,
+                                    ]),
                                 ),
                                 html.Td(
                                     dbc.Input(
@@ -756,7 +821,7 @@ def register_callbacks(app):
             return _card(
                 f"Mapeamento VTurb ({total_items} landers em {len(vsl_groups)} VSLs)",
                 html.Div([
-                    html.P("Cada lander/offer pode ter seu próprio Player ID do VTurb. Use 'Copiar p/ VSL' para aplicar o mesmo ID a todas as landers e offers da mesma VSL.",
+                    html.P("Cada lander/offer pode ter seu proprio Player ID do VTurb. Use 'Copiar p/ VSL' para aplicar o mesmo ID a todas as landers e offers da mesma VSL.",
                            style={"color": COLORS["text_muted"], "fontSize": "12px", "marginBottom": "12px"}),
                     html.Table(
                         [
@@ -818,11 +883,11 @@ def register_callbacks(app):
             if is_offer:
                 record = session.query(Offer).filter_by(id=real_id).first()
                 if not record:
-                    return dbc.Alert("Offer não encontrada.", color="danger", duration=3000)
+                    return dbc.Alert("Offer nao encontrada.", color="danger", duration=3000)
             else:
                 record = session.query(Lander).filter_by(id=real_id).first()
                 if not record:
-                    return dbc.Alert("Lander não encontrada.", color="danger", duration=3000)
+                    return dbc.Alert("Lander nao encontrada.", color="danger", duration=3000)
 
             if triggered_type == "save-mapping-btn":
                 # Save only to THIS item
