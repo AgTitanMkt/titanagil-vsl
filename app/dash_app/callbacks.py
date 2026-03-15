@@ -228,27 +228,59 @@ def register_callbacks(app):
         rows = []
         for _, r in df.iterrows():
             if by_lander:
+                # Truncar nome da lander em 60 chars
+                lander_truncated = r["lander_name"][:60] + "..." if len(r["lander_name"]) > 60 else r["lander_name"]
                 name_display = html.Div([
                     html.Div([
-                        html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "14px"}),
-                        html.Span(f' {r["product"]}', style={"fontSize": "11px", "color": COLORS["accent"], "marginLeft": "6px"}) if r["product"] else None,
+                        html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "15px"}),
+                        html.Span(f' | {r["product"]}', style={"fontSize": "11px", "color": COLORS["accent"], "marginLeft": "4px"}) if r["product"] else None,
                     ]),
-                    html.Div(r["lander_name"][:80], style={"fontSize": "10px", "color": COLORS["text_muted"], "marginTop": "2px"}),
+                    html.Div(lander_truncated, style={
+                        "fontSize": "9px",
+                        "color": COLORS["text_muted"],
+                        "marginTop": "2px",
+                        "maxWidth": "350px",
+                        "overflow": "hidden",
+                        "textOverflow": "ellipsis",
+                        "whiteSpace": "nowrap",
+                    }),
                     html.Div(f"Player: {r['player_id'][:20]}", style={"fontSize": "9px", "color": "#60a5fa", "marginTop": "1px"}) if r.get("player_id") else None,
-                ])
+                ], style={"minWidth": "300px"})
             else:
                 landers_list = r.get("landers", [])
-                landers_preview = ", ".join(landers_list[:3])
-                if len(landers_list) > 3:
-                    landers_preview += f" +{len(landers_list) - 3} mais"
+                # Mostrar as 2 primeiras landers em linhas separadas, truncadas
+                lander_items = []
+                for ln in landers_list[:2]:
+                    # Truncar cada nome em 55 caracteres
+                    truncated = ln[:55] + "..." if len(ln) > 55 else ln
+                    lander_items.append(
+                        html.Div(truncated, style={
+                            "fontSize": "9px",
+                            "color": COLORS["text_muted"],
+                            "lineHeight": "1.3",
+                            "whiteSpace": "nowrap",
+                            "overflow": "hidden",
+                            "textOverflow": "ellipsis",
+                            "maxWidth": "350px",
+                        })
+                    )
+                if len(landers_list) > 2:
+                    lander_items.append(
+                        html.Div(f"+{len(landers_list) - 2} mais", style={
+                            "fontSize": "9px",
+                            "color": COLORS["accent"],
+                            "fontStyle": "italic",
+                        })
+                    )
+
                 name_display = html.Div([
                     html.Div([
-                        html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "14px"}),
-                        html.Span(f' {r["product"]}', style={"fontSize": "11px", "color": COLORS["accent"], "marginLeft": "6px"}) if r["product"] else None,
-                        html.Span(f'  ({r["lander_count"]} landers)', style={"fontSize": "10px", "color": COLORS["text_muted"]}) if not by_lander else None,
+                        html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "15px"}),
+                        html.Span(f' | {r["product"]}', style={"fontSize": "11px", "color": COLORS["accent"], "marginLeft": "4px"}) if r["product"] else None,
+                        html.Span(f'  ({r["lander_count"]} landers)', style={"fontSize": "10px", "color": COLORS["text_muted"], "marginLeft": "6px"}),
                     ]),
-                    html.Div(landers_preview, style={"fontSize": "10px", "color": COLORS["text_muted"], "marginTop": "2px", "maxWidth": "500px", "overflow": "hidden", "textOverflow": "ellipsis", "whiteSpace": "nowrap"}),
-                ])
+                    html.Div(lander_items, style={"marginTop": "3px"}),
+                ], style={"minWidth": "300px"})
 
             profit_color = "#22c55e" if r["profit"] > 0 else "#ef4444"
             roi_val = r["roi"]
@@ -288,20 +320,34 @@ def register_callbacks(app):
         headers = ["VSL", "REVENUE", "COST", "PROFIT", "ROI", "VENDAS", "EPC", "CR", "PLAYS", "WATCH RATE", "HOOK RATE", "BODY RATE", "CLICKS"]
 
         mode_label = "Por Lander" if by_lander else "Agrupado por VSL"
+        # Header com largura mínima para VSL
+        header_cells = []
+        for i, h in enumerate(headers):
+            style = {
+                "color": COLORS["text_muted"],
+                "fontSize": "11px",
+                "textTransform": "uppercase",
+                "padding": "8px 12px",
+                "textAlign": "right" if i > 0 else "left",
+                "whiteSpace": "nowrap",
+            }
+            if i == 0:
+                style["minWidth"] = "320px"
+            header_cells.append(html.Th(h, style=style))
+
         return _card(
             f"Ranking ({len(df)} {'landers' if by_lander else 'VSLs'}) - {mode_label}",
-            html.Table(
-                [
-                    html.Thead(
-                        html.Tr(
-                            [html.Th(h, style={"color": COLORS["text_muted"], "fontSize": "11px", "textTransform": "uppercase", "padding": "8px 12px", "textAlign": "right" if i > 0 else "left"})
-                             for i, h in enumerate(headers)],
-                            style={"borderBottom": f"2px solid {COLORS['card_border']}"},
+            html.Div(
+                html.Table(
+                    [
+                        html.Thead(
+                            html.Tr(header_cells, style={"borderBottom": f"2px solid {COLORS['card_border']}"}),
                         ),
-                    ),
-                    html.Tbody(rows),
-                ],
-                style={"width": "100%", "fontSize": "13px"},
+                        html.Tbody(rows),
+                    ],
+                    style={"width": "100%", "fontSize": "13px", "tableLayout": "auto"},
+                ),
+                style={"overflowX": "auto"},
             ),
         )
 
@@ -642,16 +688,34 @@ def register_callbacks(app):
                     has_mapping = bool(item["vturb_player_id"])
                     status = dbc.Badge("OK", color="success", className="me-1") if has_mapping else dbc.Badge("Pendente", color="warning", className="me-1")
 
+                    # Truncar nome em 50 chars
+                    full_name = item["redtrack_name"] or ""
+                    truncated_name = full_name[:50] + "..." if len(full_name) > 50 else full_name
+
                     table_rows.append(
                         html.Tr(
                             [
                                 html.Td(
                                     html.Div([
-                                        html.Span("  ", style={"marginRight": "12px"}),
                                         status,
-                                        html.Span(item["redtrack_name"][:70], style={"fontSize": "11px", "color": COLORS["text_muted"]}),
-                                        html.Span(f" | Cost: {cost_display}", style={"fontSize": "10px", "color": COLORS["text_muted"], "marginLeft": "6px"}),
-                                    ]),
+                                        html.Span(truncated_name, style={
+                                            "fontSize": "10px",
+                                            "color": COLORS["text_muted"],
+                                            "fontWeight": "500",
+                                        }),
+                                        html.Span(f" | {cost_display}", style={
+                                            "fontSize": "9px",
+                                            "color": COLORS["text_muted"],
+                                            "marginLeft": "6px",
+                                            "opacity": "0.7",
+                                        }),
+                                    ], style={
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "overflow": "hidden",
+                                        "whiteSpace": "nowrap",
+                                        "textOverflow": "ellipsis",
+                                    }),
                                 ),
                                 html.Td(
                                     dbc.Input(
@@ -660,9 +724,9 @@ def register_callbacks(app):
                                         value=item["vturb_player_id"] or "",
                                         placeholder="Player ID do VTurb...",
                                         size="sm",
-                                        style={"backgroundColor": COLORS["bg"], "color": COLORS["text"], "border": f"1px solid {COLORS['card_border']}", "fontSize": "12px"},
+                                        style={"backgroundColor": COLORS["bg"], "color": COLORS["text"], "border": f"1px solid {COLORS['card_border']}", "fontSize": "11px"},
                                     ),
-                                    style={"width": "280px"},
+                                    style={"width": "260px", "minWidth": "260px"},
                                 ),
                                 html.Td(
                                     dbc.Button(
@@ -671,6 +735,7 @@ def register_callbacks(app):
                                         color="primary",
                                         size="sm",
                                     ),
+                                    style={"whiteSpace": "nowrap", "width": "80px"},
                                 ),
                                 html.Td(
                                     dbc.Button(
@@ -680,11 +745,13 @@ def register_callbacks(app):
                                         size="sm",
                                         outline=True,
                                     ),
+                                    style={"whiteSpace": "nowrap", "width": "110px"},
                                 ),
                             ],
                             style={"borderBottom": f"1px solid {COLORS['card_border']}"},
                         )
                     )
+
 
             return _card(
                 f"Mapeamento VTurb ({total_items} landers em {len(vsl_groups)} VSLs)",
@@ -695,15 +762,20 @@ def register_callbacks(app):
                         [
                             html.Thead(
                                 html.Tr(
-                                    [html.Th(h, style={"color": COLORS["text_muted"], "fontSize": "11px", "textTransform": "uppercase", "padding": "8px"})
-                                     for h in ["Lander", "VTurb Player ID", "", ""]],
+                                    [
+                                        html.Th("Lander", style={"color": COLORS["text_muted"], "fontSize": "11px", "textTransform": "uppercase", "padding": "8px", "width": "auto"}),
+                                        html.Th("VTurb Player ID", style={"color": COLORS["text_muted"], "fontSize": "11px", "textTransform": "uppercase", "padding": "8px", "width": "260px"}),
+                                        html.Th("", style={"width": "80px"}),
+                                        html.Th("", style={"width": "110px"}),
+                                    ],
                                     style={"borderBottom": f"2px solid {COLORS['card_border']}"},
                                 ),
                             ),
                             html.Tbody(table_rows),
                         ],
-                        style={"width": "100%", "fontSize": "13px"},
+                        style={"width": "100%", "fontSize": "12px", "tableLayout": "fixed"},
                     ),
+
                 ]),
             )
         finally:
