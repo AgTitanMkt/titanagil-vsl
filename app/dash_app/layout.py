@@ -55,6 +55,8 @@ def create_layout():
             dcc.Store(id="overview-data", data={}),
             dcc.Store(id="ranking-data", data=[]),
             dcc.Store(id="daily-data", data=[]),
+            dcc.Store(id="ranking-sort-col", data="cost"),
+            dcc.Store(id="ranking-sort-dir", data="desc"),
 
             # Sidebar + Content
             dbc.Row(
@@ -194,9 +196,10 @@ def dashboard_page():
 
 
 def ranking_page():
-    """VSL ranking page with date picker, VSL search, and view mode toggle."""
+    """VSL ranking page with date picker, VSL search, lead filter, traffic source filter, and view mode toggle."""
     return html.Div(
         [
+            # Row 1: Title + main filters
             dbc.Row(
                 [
                     dbc.Col(
@@ -257,7 +260,75 @@ def ranking_page():
                         className="text-end",
                     ),
                 ],
-                className="mb-4 align-items-center",
+                className="mb-3 align-items-center",
+            ),
+            # Row 2: Extra filters (Lead, Traffic Source, Sort)
+            dbc.Row(
+                [
+                    dbc.Col(
+                        html.Div(
+                            [
+                                # Lead filter
+                                html.Div([
+                                    html.Label("Lead:", style={"color": COLORS["text_muted"], "fontSize": "11px", "marginRight": "4px"}),
+                                    dcc.Dropdown(
+                                        id="ranking-lead-filter",
+                                        placeholder="Todas as Leads",
+                                        clearable=True,
+                                        searchable=True,
+                                        multi=True,
+                                        style={"width": "220px", "minWidth": "220px"},
+                                        className="dash-dark-dropdown",
+                                    ),
+                                ], style={"display": "flex", "alignItems": "center", "marginRight": "12px"}),
+                                # Traffic source filter
+                                html.Div([
+                                    html.Label("Fonte:", style={"color": COLORS["text_muted"], "fontSize": "11px", "marginRight": "4px"}),
+                                    dcc.Dropdown(
+                                        id="ranking-traffic-source",
+                                        options=[
+                                            {"label": "Todas", "value": "all"},
+                                            {"label": "Facebook", "value": "fb"},
+                                            {"label": "YouTube", "value": "yt"},
+                                            {"label": "Native", "value": "native"},
+                                        ],
+                                        value="all",
+                                        clearable=False,
+                                        style={"width": "150px"},
+                                        className="dash-dark-dropdown",
+                                    ),
+                                ], style={"display": "flex", "alignItems": "center", "marginRight": "12px"}),
+                                # Sort column
+                                html.Div([
+                                    html.Label("Ordenar:", style={"color": COLORS["text_muted"], "fontSize": "11px", "marginRight": "4px"}),
+                                    dcc.Dropdown(
+                                        id="ranking-sort-column",
+                                        options=[
+                                            {"label": "Revenue", "value": "revenue"},
+                                            {"label": "Cost", "value": "cost"},
+                                            {"label": "Profit", "value": "profit"},
+                                            {"label": "ROI", "value": "roi"},
+                                            {"label": "Vendas", "value": "purchases"},
+                                            {"label": "EPC", "value": "epc"},
+                                            {"label": "CR", "value": "conv_rate"},
+                                            {"label": "Plays", "value": "plays"},
+                                            {"label": "Watch Rate", "value": "watch_rate"},
+                                            {"label": "Hook Rate", "value": "hook_rate"},
+                                            {"label": "Body Rate", "value": "body_rate"},
+                                            {"label": "Clicks", "value": "clicks"},
+                                        ],
+                                        value="cost",
+                                        clearable=False,
+                                        style={"width": "150px"},
+                                        className="dash-dark-dropdown",
+                                    ),
+                                ], style={"display": "flex", "alignItems": "center"}),
+                            ],
+                            style={"display": "flex", "alignItems": "center", "flexWrap": "wrap", "gap": "4px"},
+                        ),
+                    ),
+                ],
+                className="mb-4",
             ),
             html.Div(id="ranking-table"),
         ],

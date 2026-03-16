@@ -10,6 +10,7 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd
 import io
+import re
 
 from app.services.dashboard_queries import (
     get_overview, get_vsl_ranking, get_vsl_ranking_by_lander, get_lander_ranking,
@@ -28,6 +29,61 @@ from app.dash_app.layout import (
 )
 
 import asyncio
+
+
+# ========== HELPER: extract lead/version/traffic from lander name ==========
+
+def extract_lead_info(lander_name: str) -> str:
+    """
+    Extract lead info from lander name.
+    Example: "FB | FBR-Vini | Cartpanda | ED | Vigorox Prime | VSL 75 | V1 | Lead 1"
+    Returns: "V1 | Lead 1" or "" if not found.
+    """
+    if not lander_name:
+        return ""
+    segments = [s.strip() for s in lander_name.split("|")]
+    lead_parts = []
+    for seg in segments:
+        seg_clean = seg.strip()
+        # Match V1, V2, etc.
+        if re.match(r'^V\d+$', seg_clean, re.IGNORECASE):
+            lead_parts.append(seg_clean)
+        # Match Lead 1, Lead 2, etc.
+        if re.match(r'^Lead\s*\d+', seg_clean, re.IGNORECASE):
+            lead_parts.append(seg_clean)
+        # Match ML 1, ML 2, ML1, ML2 (Microlead)
+        if re.match(r'^ML\s*\d+', seg_clean, re.IGNORECASE):
+            lead_parts.append(seg_clean)
+    return " | ".join(lead_parts) if lead_parts else ""
+
+
+def extract_traffic_source(lander_name: str) -> str:
+    """
+    Extract traffic source from lander name.
+    - Starts with FB → "fb"
+    - Starts with YT → "yt"
+    - Anything else → "native"
+    """
+    if not lander_name:
+        return "native"
+    first_segment = lander_name.split("|")[0].strip().upper()
+    if first_segment.startswith("FB"):
+        return "fb"
+    elif first_segment.startswith("YT"):
+        return "yt"
+    else:
+        return "native"
+
+
+def get_all_leads_from_df(df: pd.DataFrame) -> list:
+    """Extract all unique lead combinations from a dataframe with lander_name column."""
+    leads = set()
+    if "lander_name" in df.columns:
+        for name in df["lander_name"]:
+            lead = extract_lead_info(name)
+            if lead:
+                leads.add(lead)
+    return sorted(leads)
 
 
 def run_async(coro):
@@ -98,6 +154,7 @@ def register_callbacks(app):
         if not period:
             return no_update
         df = get_vsl_ranking(period, sort_by="cost", sort_dir="desc", only_with_vsl=True)
+
         if df.empty:
             return html.P("Nenhum dado encontrado. Sincronize os dados primeiro.", style={"color": COLORS["text_muted"]})
 
@@ -186,6 +243,37 @@ def register_callbacks(app):
         vsls = get_available_vsls()
         return [{"label": v, "value": v} for v in vsls]
 
+    # ========== RANKING: Populate lead filter options ==========
+    @app.callback(
+        Output("ranking-lead-filter", "options"),
+        Input("ranking-date-range", "start_date"),
+        Input("ranking-date-range", "end_date"),
+        Input("ranking-vsl-search", "value"),
+        Input("ranking-only-vsl", "value"),
+        Input("ranking-view-mode", "value"),
+    )
+    def populate_lead_filter(start_date, end_date, vsl_search, only_vsl, view_mode):
+        """Populate the lead filter dropdown based on current data."""
+        by_lander = view_mode == "lander"
+        if not by_lander:
+            return []
+
+        df = get_vsl_ranking_by_lander(
+            period="30D",
+            sort_by="cost",
+            sort_dir="desc",
+            only_with_vsl=bool(only_vsl),
+            date_from_str=start_date,
+            date_to_str=end_date,
+            vsl_filter=vsl_search,
+        )
+
+        if df.empty:
+            return []
+
+        leads = get_all_leads_from_df(df)
+        return [{"label": l, "value": l} for l in leads]
+
     # ========== RANKING ==========
     @app.callback(
         Output("ranking-table", "children"),
@@ -194,26 +282,52 @@ def register_callbacks(app):
         Input("ranking-vsl-search", "value"),
         Input("ranking-only-vsl", "value"),
         Input("ranking-view-mode", "value"),
+        Input("ranking-lead-filter", "value"),
+        Input("ranking-traffic-source", "value"),
+        Input("ranking-sort-column", "value"),
     )
-    def update_ranking(start_date, end_date, vsl_search, only_vsl, view_mode):
+    def update_ranking(start_date, end_date, vsl_search, only_vsl, view_mode, lead_filter, traffic_source, sort_column):
         from app.services.dashboard_queries import get_vsl_ranking, get_vsl_ranking_by_lander
+
+        # Determine sort column
+        sort_col = sort_column or "cost"
 
         by_lander = view_mode == "lander"
 
         if by_lander:
             df = get_vsl_ranking_by_lander(
                 period="30D",
-                sort_by="cost",
+                sort_by=sort_col,
                 sort_dir="desc",
                 only_with_vsl=bool(only_vsl),
                 date_from_str=start_date,
                 date_to_str=end_date,
                 vsl_filter=vsl_search,
             )
+
+            # Apply traffic source filter
+            if traffic_source and traffic_source != "all" and not df.empty:
+                mask = df["lander_name"].apply(lambda x: extract_traffic_source(x) == traffic_source)
+                df = df[mask].reset_index(drop=True)
+
+            # Apply lead filter
+            if lead_filter and not df.empty:
+                if isinstance(lead_filter, str):
+                    lead_filter = [lead_filter]
+                if lead_filter:
+                    def matches_lead(lander_name):
+                        lead_info = extract_lead_info(lander_name)
+                        for lf in lead_filter:
+                            if lf in lead_info:
+                                return True
+                        return False
+                    mask = df["lander_name"].apply(matches_lead)
+                    df = df[mask].reset_index(drop=True)
+
         else:
             df = get_vsl_ranking(
                 period="30D",
-                sort_by="cost",
+                sort_by=sort_col,
                 sort_dir="desc",
                 only_with_vsl=bool(only_vsl),
                 date_from_str=start_date,
@@ -231,6 +345,12 @@ def register_callbacks(app):
                 # ---- MODO POR LANDER: clique para expandir nome completo ----
                 lander_full = r["lander_name"]
                 lander_short = lander_full[:45] + "..." if len(lander_full) > 45 else lander_full
+
+                # Extract lead info for display
+                lead_info = extract_lead_info(lander_full)
+                traffic_src = extract_traffic_source(lander_full)
+                traffic_badge_color = {"fb": "#1877F2", "yt": "#FF0000", "native": "#22c55e"}.get(traffic_src, "#71717a")
+                traffic_label = {"fb": "FB", "yt": "YT", "native": "NT"}.get(traffic_src, "?")
 
                 if len(lander_full) > 45:
                     lander_display = html.Details([
@@ -262,8 +382,18 @@ def register_callbacks(app):
 
                 name_display = html.Div([
                     html.Div([
+                        html.Span(traffic_label, style={
+                            "fontSize": "9px",
+                            "color": "#fff",
+                            "backgroundColor": traffic_badge_color,
+                            "padding": "1px 5px",
+                            "borderRadius": "3px",
+                            "marginRight": "6px",
+                            "fontWeight": "600",
+                        }),
                         html.Span(r["vsl_id"], style={"fontWeight": "700", "color": COLORS["text"], "fontSize": "14px"}),
                         html.Span(f' | {r["product"]}', style={"fontSize": "11px", "color": COLORS["accent"], "marginLeft": "4px"}) if r["product"] else None,
+                        html.Span(f'  {lead_info}', style={"fontSize": "10px", "color": "#a78bfa", "marginLeft": "6px"}) if lead_info else None,
                     ]),
                     lander_display,
                     html.Div(f"Player: {r['player_id'][:20]}", style={"fontSize": "9px", "color": "#60a5fa", "marginTop": "1px"}) if r.get("player_id") else None,
@@ -364,10 +494,13 @@ def register_callbacks(app):
                 )
             )
 
+        # Column keys for sorting reference
+        col_keys = ["vsl", "revenue", "cost", "profit", "roi", "purchases", "epc", "conv_rate", "plays", "watch_rate", "hook_rate", "body_rate", "clicks"]
         headers = ["VSL", "REVENUE", "COST", "PROFIT", "ROI", "VENDAS", "EPC", "CR", "PLAYS", "WATCH RATE", "HOOK RATE", "BODY RATE", "CLICKS"]
 
         mode_label = "Por Lander" if by_lander else "Agrupado por VSL"
-        # Header com largura mínima para VSL
+
+        # Build header cells with sort indicator
         header_cells = []
         for i, h in enumerate(headers):
             style = {
@@ -380,7 +513,16 @@ def register_callbacks(app):
             }
             if i == 0:
                 style["minWidth"] = "320px"
-            header_cells.append(html.Th(h, style=style))
+
+            # Add sort indicator arrow
+            sort_indicator = ""
+            if i > 0 and i < len(col_keys):
+                if col_keys[i] == sort_col:
+                    sort_indicator = " ▼"
+                    style["color"] = COLORS["accent"]
+                    style["fontWeight"] = "700"
+
+            header_cells.append(html.Th(f"{h}{sort_indicator}", style=style))
 
         return _card(
             f"Ranking ({len(df)} {'landers' if by_lander else 'VSLs'}) - {mode_label}",
