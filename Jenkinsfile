@@ -111,7 +111,7 @@ pipeline {
             '''
         }
         always {
-            sh 'echo "Pipeline finalizado: ${currentBuild.result}"'
+            echo "Pipeline finalizado: ${currentBuild.result}"
         }
     }
 }
