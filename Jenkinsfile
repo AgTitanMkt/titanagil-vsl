@@ -77,10 +77,10 @@ pipeline {
                 sh '''
                 echo "Verificando tabelas do banco..."
                 docker exec ${CONTAINER_NAME} python -c "
-from app.models.database import init_db
-init_db()
-print('Database tables OK')
-"
+                from app.models.database import init_db
+                init_db()
+                print('Database tables OK')
+                "
                 '''
             }
         }
@@ -89,8 +89,8 @@ print('Database tables OK')
             steps {
                 sh '''
                 # Copy nginx config if changed
-                if [ -f docker/nginx/default.conf ]; then
-                    sudo cp docker/nginx/default.conf /etc/nginx/sites-available/vsl-dashboard
+                if [ -f docker/nginx/vsl.conf ]; then
+                    sudo cp docker/nginx/vsl.conf /etc/nginx/sites-available/vsl-dashboard
                     sudo ln -sf /etc/nginx/sites-available/vsl-dashboard /etc/nginx/sites-enabled/vsl-dashboard
                     sudo nginx -t && sudo systemctl reload nginx
                     echo "Nginx recarregado com sucesso"
