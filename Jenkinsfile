@@ -4,7 +4,6 @@ pipeline {
     environment {
         APP_NAME = 'vsl_dashboard'
         DEPLOY_PATH = '/var/www/vsl-dash-python'
-        CONTAINER_NAME = 'vsl_dashboard_app'
     }
 
     stages {
@@ -83,13 +82,12 @@ pipeline {
         stage('Reload Nginx') {
             steps {
                 sh '''
-                # Copy nginx config if changed
-                if [ -f docker/nginx/vsl.conf ]; then
-                    sudo cp docker/nginx/vsl.conf /etc/nginx/sites-available/vsl-dashboard
-                    sudo ln -sf /etc/nginx/sites-available/vsl-dashboard /etc/nginx/sites-enabled/vsl-dashboard
-                    sudo nginx -t && sudo systemctl reload nginx
-                    echo "Nginx recarregado com sucesso"
-                fi
+                echo "Recarregando nginx do container..."
+
+                docker compose -p laravel_docker exec -T nginx nginx -t
+                docker compose -p laravel_docker exec -T nginx nginx -s reload
+
+                echo "Nginx recarregado com sucesso"
                 '''
             }
         }
