@@ -1,0 +1,54 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: vsl_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: titanagil123
+      MYSQL_DATABASE: vsl_dashboard
+      MYSQL_USER: vsl_user
+      MYSQL_PASSWORD: titanagil123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - titan_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptitanagil123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  vsl_app:
+    container_name: vsl_dashboard_app
+    build:
+      context: ..
+      dockerfile: docker/python/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8050:8050"
+    networks:
+      - titan_network
+    volumes:
+      - vsl_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  titan_network:
+    external: true
+    driver: bridge
+
+volumes:
+  mysql_data:
+  vsl_logs:
