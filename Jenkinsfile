@@ -43,7 +43,7 @@ pipeline {
         stage('Build & Deploy Containers') {
             steps {
                 sh '''
-                docker compose -p vsl_dashboard up -d --build --remove-orphans
+                docker compose -p vsl_dashboard -f docker/docker-compose.yml up -d --build --remove-orphans
                 '''
             }
         }
