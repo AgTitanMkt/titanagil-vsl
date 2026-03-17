@@ -74,8 +74,8 @@ pipeline {
         stage('Run Database Migrations' ) {
             steps {
                 sh '''
-                echo "Verificando tabelas do banco..."
-                docker compose -p vsl_dashboard exec -T vsl_app python -c docker compose -p vsl_dashboard exec -T vsl_app python -c "from app.models.database import init_db; init_db(); print('Database tables OK')"
+                docker compose -p vsl_dashboard exec -T vsl_app \
+                python -c "from app.models.database import init_db; init_db(); print('Database tables OK')"
                 '''
             }
         }
