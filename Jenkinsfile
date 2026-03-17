@@ -43,7 +43,7 @@ pipeline {
         stage('Build & Deploy Containers') {
             steps {
                 sh '''
-                docker compose vsl_dashboard up -d --build
+                docker compose -p vsl_dashboard up -d --build
                 '''
             }
         }
