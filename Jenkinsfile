@@ -32,7 +32,7 @@ pipeline {
                     sh '''
                     cp .env.example .env
 
-                    echo "DATABASE_URL=mysql+pymysql://${VSL_DB_USERNAME}:${VSL_DB_PASSWORD}@${VSL_DB_HOST}:3306/${VSL_DB_DATABASE}" >> .env
+                    echo "DATABASE_URL=mysql+pymysql://${VSL_DB_USERNAME}:${VSL_DB_PASSWORD}@mysql:3306/${VSL_DB_DATABASE}" >> .env
                     echo "PORT=8050" >> .env
                     echo "DEBUG=false" >> .env
                     '''
@@ -43,7 +43,7 @@ pipeline {
         stage('Build & Deploy Containers') {
             steps {
                 sh '''
-                docker compose -p vsl_dashboard up -d --build
+                docker compose -p vsl_dashboard up -d --build --remove-orphans
                 '''
             }
         }
@@ -56,7 +56,7 @@ pipeline {
 
                 # Wait up to 60 seconds for health check
                 for i in $(seq 1 12); do
-                    if docker exec ${CONTAINER_NAME} curl -sf http://localhost:8050/api/health > /dev/null 2>&1; then
+                    if docker compose -p vsl_dashboard exec -T vsl_app curl -sf http://localhost:8050/api/health > /dev/null 2>&1; then
                         echo "Aplicação saudável!"
                         exit 0
                     fi
@@ -65,7 +65,7 @@ pipeline {
                 done
 
                 echo "ERRO: Aplicação não respondeu ao health check"
-                docker logs ${CONTAINER_NAME} --tail 50
+                docker compose -p vsl_dashboard logs vsl_app --tail 50
                 exit 1
                 '''
             }
@@ -75,7 +75,7 @@ pipeline {
             steps {
                 sh '''
                 echo "Verificando tabelas do banco..."
-                docker exec ${CONTAINER_NAME} python -c "
+                docker compose -p vsl_dashboard exec -T vsl_app python -c "
                 from app.models.database import init_db
                 init_db()
                 print('Database tables OK')
@@ -113,7 +113,7 @@ pipeline {
         failure {
             sh '''
             echo "=== LOGS DO CONTAINER ==="
-            docker logs ${CONTAINER_NAME} --tail 100 || true
+            docker compose -p vsl_dashboard logs vsl_app --tail 50
             '''
         }
         always {
