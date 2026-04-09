@@ -543,21 +543,46 @@ def register_callbacks(app):
 
 
     @app.callback(
-        Output("download-csv", "data"),
-        Input("export-csv-btn", "n_clicks"),
-        State("ranking-period", "value"),
+        Output("ranking-csv-download", "data"),
+        Input("ranking-csv-btn", "n_clicks"),
+        State("ranking-date-range", "start_date"),
+        State("ranking-date-range", "end_date"),
         State("ranking-only-vsl", "value"),
+        State("ranking-view-mode", "value"),
+        State("ranking-vsl-search", "value"),
         prevent_initial_call=True,
     )
-    def export_csv(n_clicks, period, only_vsl):
+    def export_csv(n_clicks, start_date, end_date, only_vsl, view_mode, vsl_search):
         if not n_clicks:
             return no_update
-        only = "yes" in (only_vsl or [])
-        df = get_vsl_ranking(period, sort_by="cost", sort_dir="desc", only_with_vsl=only)
+        only = bool(only_vsl)
+        by_lander = view_mode == "lander"
+
+        if by_lander:
+            df = get_vsl_ranking_by_lander(
+                period="30D",
+                sort_by="cost",
+                sort_dir="desc",
+                only_with_vsl=only,
+                date_from_str=start_date,
+                date_to_str=end_date,
+                vsl_filter=vsl_search,
+            )
+        else:
+            df = get_vsl_ranking(
+                period="30D",
+                sort_by="cost",
+                sort_dir="desc",
+                only_with_vsl=only,
+                date_from_str=start_date,
+                date_to_str=end_date,
+                vsl_filter=vsl_search,
+            )
+
         if df.empty:
             return no_update
         export_df = df.drop(columns=["landers"], errors="ignore")
-        return dcc.send_data_frame(export_df.to_csv, f"vsl-ranking-{period}.csv", index=False)
+        return dcc.send_data_frame(export_df.to_csv, "vsl-ranking.csv", index=False)
 
     # ========== LANDERS ==========
     @app.callback(
